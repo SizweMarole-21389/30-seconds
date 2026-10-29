@@ -13,4 +13,4 @@ A two player online version of the describe-it party game. One of you describes 
 
 ## Notes
 
-It is a single static page. The two browsers connect directly to each other using WebRTC through PeerJS, so there is no game server. The PeerJS public service is only used to introduce the two browsers. On a few strict mobile networks a direct connection can fail, in which case try Wi-Fi.
+It is a single static page with no game server of mine. The player who starts the game runs the game in their browser, and the two browsers pass messages through a free public MQTT relay (broker.emqx.io, with broker.hivemq.com as a fallback) over secure WebSocket, so it works on any network. Anyone who knew a live game code could join it, so do not type anything private as your name.

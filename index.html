@@ -47,17 +47,17 @@
 <main>
   <h1>2 <span>Minutes</span></h1>
   <p class="sub">Describe it. Don't say it. Beat the clock.</p>
+  <div id="net" style="display:none;background:#5a2a2a;color:#ffd0d0;padding:8px 12px;border-radius:8px;margin-bottom:10px;text-align:center"></div>
   <div id="app"></div>
 </main>
 
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script>
 const ITEMS = ["Alarm clock", "Albert Einstein", "Amarula", "Amazon", "Amazon Rainforest", "Antarctica", "Apple", "Avengers", "Backpack", "Barack Obama", "Barbie", "Bat", "Batman", "Bermuda Triangle", "Beyoncé", "Bicycle pump", "Big Ben", "Biltong", "Birthday party", "Black Friday", "Black Mirror", "Black Panther", "Braai", "Bruce Lee", "Bubble wrap", "Buckingham Palace", "Bungee jumping", "Bunny chow", "Burna Boy", "Camping", "Cape Town Waterfront", "Chainsaw", "Chameleon", "Charlie Chaplin", "Checkers", "Cheesecake", "Cheetah", "Chicken wings", "Chocolate cake", "Cleopatra", "Coca-Cola", "Coffee", "Cooking", "Cristiano Ronaldo", "Crocodile", "Dancing", "Discovery", "Disneyland", "Dolphin", "Dragon Ball Z", "Drake", "Dubai", "Durban beachfront", "Eiffel Tower", "Elephant", "Elon Musk", "Encanto", "Exam week", "FIFA", "Fast and Furious", "Finding Nemo", "Fireworks", "Fish and chips", "Fishing", "Flamingo", "Fortnite", "Fridge", "Friends", "Frozen", "Game of Thrones", "Gardening", "Generations", "Giraffe", "Google", "Gorilla", "Graduation", "Grand Canyon", "Great Wall of China", "Group project", "Gym", "Hair straightener", "Hamburger", "Hammock", "Handcuffs", "Harry Potter", "Headphones", "Hide and seek", "Hippo", "Hollywood", "Home Alone", "Hong Kong", "Hot water bottle", "Hulk Hogan", "Ice cream", "Instagram", "Jelly Tots", "Job interview", "Johannesburg", "Jurassic Park", "Kangaroo", "Karaoke", "Kendrick Lamar", "Keyboard", "Kim Kardashian", "Koeksister", "Kota", "Kruger Park", "Leonardo da Vinci", "Lionel Messi", "Lipstick", "Load shedding", "Loadshedding", "Loch Ness", "Lord of the Rings", "MTN", "Mango", "Marilyn Monroe", "McDonald's", "Meerkat", "Michael Jackson", "Michael Jordan", "Microwave", "Milkshake", "Minecraft", "Moana", "Money Heist", "Mosquito net", "Mother Teresa", "Mount Everest", "Mr Bean", "Mr Price", "Nando's", "Napoleon", "Naruto", "Nelson Mandela", "Netflix", "Netflix and chill", "Niagara Falls", "Nike", "Noodles", "Octopus", "Online shopping", "Oprah Winfrey", "Owl", "Pancakes", "Pap and wors", "Parachute", "Peacock", "Peanut butter", "Penguin", "Pineapple", "Pirates of the Caribbean", "Pizza", "PlayStation", "Popcorn", "Power bank", "Pyramids of Giza", "Queen Elizabeth II", "Remote control", "Rhino", "Rihanna", "Road trip", "Robben Island", "Rock climbing", "Rooibos tea", "Sahara Desert", "Samsung", "Santa Claus", "Scorpion", "Selfie", "Selfie stick", "Serena Williams", "Shakespeare", "Shark", "Sherlock Holmes", "Shoprite", "Shrek", "Siya Kolisi", "Skateboard", "Skydiving", "Snapchat", "Spaghetti", "Spider-Man", "SpongeBob", "Spotify", "Squid Game", "Star Wars", "Statue of Liberty", "Steve Jobs", "Stranger Things", "Sun City", "Sunglasses", "Surfing", "Sushi", "Swimming", "Table Mountain", "Taj Mahal", "Takealot", "Taxi rank", "Taylor Swift", "Telescope", "Tesla", "The Lion King", "The Matrix", "The Simpsons", "TikTok", "Times Square", "Titanic", "Toasted sandwich", "Tom and Jerry", "Tomato sauce", "Toothbrush", "Tortoise", "Toy Story", "Traffic jam", "Trampoline", "Trevor Noah", "Tyla", "Uber", "Uber Eats", "Umbrella", "Usain Bolt", "Vacuum cleaner", "Vatican City", "Vetkoek", "Victoria Falls", "Video call", "Vodacom", "Washing machine", "Watermelon", "Wedding", "WhatsApp", "Wheelbarrow", "Whitney Houston", "Wi-Fi router", "Woolworths", "Yoga", "YouTube", "Zanzibar"];
 const TURN_MS = 120000;
-const PEER_PREFIX = 'sec30-';
 const app = document.getElementById('app');
 
-let isHost = false, peer = null, conn = null;
+let isHost = false;
 let room = null;          // host only: the authoritative game state
 let st = null, sig = '', recvAt = 0;
 
@@ -129,73 +129,119 @@ function apply(me, type, i) {
 }
 function publish() {
   setState(view(0));
-  if (conn && conn.open) conn.send({ t: 'state', s: view(1) });
+  if (guestId) send(topicBase + '/to1/' + guestId, { t: 'state', s: view(1) });
 }
 
-/* ---------- networking ---------- */
-function cleanName(s) { return String(s || '').replace(/[<>]/g, '').trim().slice(0, 16); }
+/* ---------- networking (public MQTT relay over secure WebSocket) ---------- */
+const BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt'];
+const base = c => `sec30/v1/${c}`;
+let mq = null, topicBase = '', guestId = null, myCid = '';
+let lastGuestSeen = 0, lastHostSeen = 0, lastSeq = 0, seq = 0;
 
+const rid = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), b => b.toString(16).padStart(2, '0')).join('');
+function cleanName(s) { return String(s || '').replace(/[<>]/g, '').trim().slice(0, 16); }
 function newCode() {
   const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   let c = '';
   for (let i = 0; i < 4; i++) c += letters[crypto.getRandomValues(new Uint32Array(1))[0] % letters.length];
   return c;
 }
+function setNet(msg) {
+  const n = document.getElementById('net');
+  n.textContent = msg; n.style.display = msg ? 'block' : 'none';
+}
+function send(topic, obj, qos = 0, retain = false) {
+  if (mq && mq.connected) mq.publish(topic, JSON.stringify(obj), { qos, retain });
+}
+function connectBroker(will, onReady, onFail, i = 0) {
+  if (i >= BROKERS.length) return onFail();
+  const c = mqtt.connect(BROKERS[i], { connectTimeout: 6000, reconnectPeriod: 2000, clientId: 'sec30_' + rid(), will });
+  let done = false;
+  const t = setTimeout(() => { if (!done) { c.end(true); connectBroker(will, onReady, onFail, i + 1); } }, 7000);
+  c.once('connect', () => { done = true; clearTimeout(t); mq = c; onReady(); });
+  c.on('offline', () => { if (done) setNet('Connection problem, trying to reconnect...'); });
+  c.on('connect', () => { if (done) setNet(''); });
+}
 
 function hostGame(name, rounds, fail, tries = 0) {
   const code = newCode();
-  peer = new Peer(PEER_PREFIX + code);
-  peer.on('open', () => {
-    isHost = true;
-    room = { code, rounds, turn: 0, phase: 'lobby', deck: shuffle([...ITEMS]), card: [], got: [], endsAt: 0,
-             players: [{ name: cleanName(name) || 'Player 1', score: 0 }] };
-    publish();
-  });
-  peer.on('connection', c => {
-    if (conn && conn.open) { c.on('open', () => { c.send({ t: 'full' }); setTimeout(() => c.close(), 300); }); return; }
-    conn = c;
-    c.on('data', m => {
-      if (m.t === 'join' && room.players.length < 2) {
-        room.players.push({ name: cleanName(m.name) || 'Player 2', score: 0 });
-        room.phase = 'ready';
+  topicBase = base(code);
+  let id = rid(), taken = false, started = false;
+  connectBroker({ topic: topicBase + '/host', payload: '', retain: true, qos: 1 }, () => {
+    mq.on('message', (topic, payload) => {
+      let m; try { m = JSON.parse(payload.toString() || 'null'); } catch (e) { return; }
+      if (!m) return;
+      if (topic === topicBase + '/host') { if (m.id !== id && !started) taken = true; return; }
+      if (!started || !room) return;
+      if (topic === topicBase + '/join') {
+        if (guestId && guestId !== m.cid) return send(topicBase + '/hello/' + m.cid, { t: 'full' }, 1);
+        guestId = m.cid; lastGuestSeen = Date.now();
+        if (room.players.length < 2) {
+          room.players.push({ name: cleanName(m.name) || 'Player 2', score: 0 });
+          room.phase = 'ready';
+        }
         publish();
-      } else if (m.t === 'act' && room.players.length === 2) {
-        apply(1, m.type, +m.i);
+      } else if (topic === topicBase + '/to0' && m.cid === guestId) {
+        lastGuestSeen = Date.now();
+        if (m.type && m.seq > lastSeq && room.players.length === 2) { lastSeq = m.seq; apply(1, m.type, +m.i); }
       }
     });
-    c.on('close', () => showLost('Your friend left the game.'));
-  });
-  peer.on('error', e => {
-    if (e.type === 'unavailable-id' && tries < 5) { peer.destroy(); hostGame(name, rounds, fail, tries + 1); }
-    else fail('Could not start a game. Check your internet and try again.');
-  });
-  setInterval(() => { if (room) { const was = room.phase; tick(); if (was !== room.phase || room.phase === 'play') publish(); } }, 500);
+    mq.subscribe([topicBase + '/host', topicBase + '/join', topicBase + '/to0'], { qos: 1 });
+    setTimeout(() => {
+      if (taken) {
+        mq.end(true);
+        return tries < 5 ? hostGame(name, rounds, fail, tries + 1) : fail('Could not start a game. Try again.');
+      }
+      started = true;
+      send(topicBase + '/host', { id }, 1, true);
+      isHost = true;
+      room = { code, rounds, turn: 0, phase: 'lobby', deck: shuffle([...ITEMS]), card: [], got: [], endsAt: 0,
+               players: [{ name: cleanName(name) || 'Player 1', score: 0 }] };
+      publish();
+    }, 900);
+  }, () => fail('Could not reach the game relay. Check your internet and try again.'));
+
+  setInterval(() => {
+    if (!room) return;
+    const was = room.phase; tick();
+    if (was !== room.phase || room.phase === 'play') publish();
+  }, 500);
+  setInterval(() => {
+    if (!room || !guestId) return;
+    publish();
+    setNet(Date.now() - lastGuestSeen > 20000 ? 'Your friend seems to have disconnected.' : '');
+  }, 2000);
 }
 
 function joinGame(name, code, fail) {
   code = code.toUpperCase().trim();
   if (code.length !== 4) return fail('Enter the 4 letter code.');
-  peer = new Peer();
-  let opened = false;
-  const timeout = setTimeout(() => { if (!opened) { fail('Could not reach that game. Check the code and that your friend still has the page open.'); peer.destroy(); } }, 12000);
-  peer.on('open', () => {
-    conn = peer.connect(PEER_PREFIX + code, { reliable: true });
-    conn.on('open', () => { opened = true; clearTimeout(timeout); conn.send({ t: 'join', name: cleanName(name) }); });
-    conn.on('data', m => {
-      if (m.t === 'state') setState(m.s);
-      else if (m.t === 'full') fail('That game is already full.');
+  topicBase = base(code); myCid = rid();
+  let joined = false;
+  connectBroker(null, () => {
+    mq.on('message', (topic, payload) => {
+      let m; try { m = JSON.parse(payload.toString()); } catch (e) { return; }
+      if (topic === topicBase + '/hello/' + myCid && m.t === 'full') { joined = true; return fail('That game is already full.'); }
+      if (topic === topicBase + '/to1/' + myCid && m.t === 'state') {
+        joined = true; lastHostSeen = Date.now(); setNet(''); setState(m.s);
+      }
     });
-    conn.on('close', () => showLost('Lost the connection to the host.'));
-  });
-  peer.on('error', e => {
-    clearTimeout(timeout);
-    fail(e.type === 'peer-unavailable' ? 'No game with that code.' : 'Connection problem. Try again.');
-  });
-}
-
-function showLost(msg) {
-  app.replaceChildren(txt('p', 'big', msg), el('button', { textContent: 'Back to start', onclick: () => location.href = location.pathname }));
-  sig = 'lost';
+    mq.subscribe([topicBase + '/to1/' + myCid, topicBase + '/hello/' + myCid], { qos: 1 }, () => {
+      let attempts = 0;
+      const tryJoin = () => {
+        if (joined) return;
+        if (attempts++ >= 5) return fail('No game with that code, or your friend closed the page.');
+        send(topicBase + '/join', { cid: myCid, name: cleanName(name) }, 1);
+        setTimeout(tryJoin, 2500);
+      };
+      tryJoin();
+    });
+    setInterval(() => {
+      if (!joined) return;
+      send(topicBase + '/to0', { cid: myCid, ping: 1 });
+      if (Date.now() - lastHostSeen > 12000) setNet('Lost contact with the host. Waiting...');
+    }, 3000);
+  }, () => fail('Could not reach the game relay. Check your internet and try again.'));
 }
 
 /* ---------- home ---------- */
@@ -219,7 +265,7 @@ function renderHome(err) {
     urlCode ? txt('p', 'or', 'You were invited. Enter your name and join.')
             : el('div', {}, txt('label', '', 'Rounds each'), rounds, create, txt('p', 'or', 'or join a friend')),
     txt('label', '', 'Game code'), joinCode, join, errBox,
-    txt('div', 'rules', 'One of you starts a game and sends the link or the 4 letter code. You both play on your own phone or laptop, and you talk on a call. Take turns: the describer sees 5 names or things and has 2 minutes to describe them without saying the words. The other person guesses out loud. The describer taps each one that was guessed. 1 point each. The person who started the game must keep the page open.')
+    txt('div', 'rules', 'One of you starts a game and sends the link or the 4 letter code. You both play on your own phone or laptop, and you talk on a call. Take turns: the describer sees 5 names or things and has 2 minutes to describe them without saying the words. The other person guesses out loud. The describer taps each one that was guessed. 1 point each. The person who started the game must keep the page open. Game messages pass through a free public relay, so do not type anything private as your name.')
   );
 }
 
@@ -233,7 +279,7 @@ function scoreBar() {
 
 function act(type, extra) {
   if (isHost) apply(0, type, extra ? extra.i : 0);
-  else if (conn && conn.open) conn.send({ t: 'act', type, i: extra ? extra.i : 0 });
+  else send(topicBase + '/to0', { cid: myCid, type, i: extra ? extra.i : 0, seq: ++seq }, 1);
 }
 
 function render() {
