@@ -1,6 +1,6 @@
-# 30 Seconds
+# 2 Minutes
 
-A two player online version of the describe-it party game. One of you describes 5 names or things in 30 seconds without saying them, the other guesses out loud. Play it on a call, each on your own phone or laptop.
+A two player online version of the describe-it party game. One of you describes 5 names or things in 2 minutes without saying them, the other guesses out loud. Play it on a call, each on your own phone or laptop.
 
 **Play:** https://sizwemarole-21389.github.io/30-seconds/
 

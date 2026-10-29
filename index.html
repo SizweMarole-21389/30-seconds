@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>30 Seconds</title>
+<title>2 Minutes</title>
 <style>
   :root { --bg:#14102b; --card:#fff8e7; --ink:#2a2140; --accent:#ff7a3d; --good:#2fbf71; --mute:#9d94c4; }
   * { box-sizing:border-box; }
@@ -45,7 +45,7 @@
 </head>
 <body>
 <main>
-  <h1>30 <span>Seconds</span></h1>
+  <h1>2 <span>Minutes</span></h1>
   <p class="sub">Describe it. Don't say it. Beat the clock.</p>
   <div id="app"></div>
 </main>
@@ -53,7 +53,7 @@
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 const ITEMS = ["Alarm clock", "Albert Einstein", "Amarula", "Amazon", "Amazon Rainforest", "Antarctica", "Apple", "Avengers", "Backpack", "Barack Obama", "Barbie", "Bat", "Batman", "Bermuda Triangle", "Beyoncé", "Bicycle pump", "Big Ben", "Biltong", "Birthday party", "Black Friday", "Black Mirror", "Black Panther", "Braai", "Bruce Lee", "Bubble wrap", "Buckingham Palace", "Bungee jumping", "Bunny chow", "Burna Boy", "Camping", "Cape Town Waterfront", "Chainsaw", "Chameleon", "Charlie Chaplin", "Checkers", "Cheesecake", "Cheetah", "Chicken wings", "Chocolate cake", "Cleopatra", "Coca-Cola", "Coffee", "Cooking", "Cristiano Ronaldo", "Crocodile", "Dancing", "Discovery", "Disneyland", "Dolphin", "Dragon Ball Z", "Drake", "Dubai", "Durban beachfront", "Eiffel Tower", "Elephant", "Elon Musk", "Encanto", "Exam week", "FIFA", "Fast and Furious", "Finding Nemo", "Fireworks", "Fish and chips", "Fishing", "Flamingo", "Fortnite", "Fridge", "Friends", "Frozen", "Game of Thrones", "Gardening", "Generations", "Giraffe", "Google", "Gorilla", "Graduation", "Grand Canyon", "Great Wall of China", "Group project", "Gym", "Hair straightener", "Hamburger", "Hammock", "Handcuffs", "Harry Potter", "Headphones", "Hide and seek", "Hippo", "Hollywood", "Home Alone", "Hong Kong", "Hot water bottle", "Hulk Hogan", "Ice cream", "Instagram", "Jelly Tots", "Job interview", "Johannesburg", "Jurassic Park", "Kangaroo", "Karaoke", "Kendrick Lamar", "Keyboard", "Kim Kardashian", "Koeksister", "Kota", "Kruger Park", "Leonardo da Vinci", "Lionel Messi", "Lipstick", "Load shedding", "Loadshedding", "Loch Ness", "Lord of the Rings", "MTN", "Mango", "Marilyn Monroe", "McDonald's", "Meerkat", "Michael Jackson", "Michael Jordan", "Microwave", "Milkshake", "Minecraft", "Moana", "Money Heist", "Mosquito net", "Mother Teresa", "Mount Everest", "Mr Bean", "Mr Price", "Nando's", "Napoleon", "Naruto", "Nelson Mandela", "Netflix", "Netflix and chill", "Niagara Falls", "Nike", "Noodles", "Octopus", "Online shopping", "Oprah Winfrey", "Owl", "Pancakes", "Pap and wors", "Parachute", "Peacock", "Peanut butter", "Penguin", "Pineapple", "Pirates of the Caribbean", "Pizza", "PlayStation", "Popcorn", "Power bank", "Pyramids of Giza", "Queen Elizabeth II", "Remote control", "Rhino", "Rihanna", "Road trip", "Robben Island", "Rock climbing", "Rooibos tea", "Sahara Desert", "Samsung", "Santa Claus", "Scorpion", "Selfie", "Selfie stick", "Serena Williams", "Shakespeare", "Shark", "Sherlock Holmes", "Shoprite", "Shrek", "Siya Kolisi", "Skateboard", "Skydiving", "Snapchat", "Spaghetti", "Spider-Man", "SpongeBob", "Spotify", "Squid Game", "Star Wars", "Statue of Liberty", "Steve Jobs", "Stranger Things", "Sun City", "Sunglasses", "Surfing", "Sushi", "Swimming", "Table Mountain", "Taj Mahal", "Takealot", "Taxi rank", "Taylor Swift", "Telescope", "Tesla", "The Lion King", "The Matrix", "The Simpsons", "TikTok", "Times Square", "Titanic", "Toasted sandwich", "Tom and Jerry", "Tomato sauce", "Toothbrush", "Tortoise", "Toy Story", "Traffic jam", "Trampoline", "Trevor Noah", "Tyla", "Uber", "Uber Eats", "Umbrella", "Usain Bolt", "Vacuum cleaner", "Vatican City", "Vetkoek", "Victoria Falls", "Video call", "Vodacom", "Washing machine", "Watermelon", "Wedding", "WhatsApp", "Wheelbarrow", "Whitney Houston", "Wi-Fi router", "Woolworths", "Yoga", "YouTube", "Zanzibar"];
-const TURN_MS = 30000;
+const TURN_MS = 120000;
 const PEER_PREFIX = 'sec30-';
 const app = document.getElementById('app');
 
@@ -219,7 +219,7 @@ function renderHome(err) {
     urlCode ? txt('p', 'or', 'You were invited. Enter your name and join.')
             : el('div', {}, txt('label', '', 'Rounds each'), rounds, create, txt('p', 'or', 'or join a friend')),
     txt('label', '', 'Game code'), joinCode, join, errBox,
-    txt('div', 'rules', 'One of you starts a game and sends the link or the 4 letter code. You both play on your own phone or laptop, and you talk on a call. Take turns: the describer sees 5 names or things and has 30 seconds to describe them without saying the words. The other person guesses out loud. The describer taps each one that was guessed. 1 point each. The person who started the game must keep the page open.')
+    txt('div', 'rules', 'One of you starts a game and sends the link or the 4 letter code. You both play on your own phone or laptop, and you talk on a call. Take turns: the describer sees 5 names or things and has 2 minutes to describe them without saying the words. The other person guesses out loud. The describer taps each one that was guessed. 1 point each. The person who started the game must keep the page open.')
   );
 }
 
@@ -254,7 +254,7 @@ function render() {
   if (st.phase === 'ready') {
     const body = iAmDescriber
       ? [txt('p', 'big', `${d.name}, you're describing.`), txt('p', 'sub', 'Your friend guesses out loud. Press start when you are both ready.'),
-         el('button', { textContent: 'Start the 30 seconds', onclick: () => act('start') })]
+         el('button', { textContent: 'Start the 2 minutes', onclick: () => act('start') })]
       : [txt('p', 'big', `${d.name} is describing.`), txt('p', 'sub', 'Get ready to guess. The words show on their screen, not yours.')];
     return app.replaceChildren(scoreBar(), ...body);
   }
@@ -299,8 +299,8 @@ setInterval(() => {
   if (!st || st.phase !== 'play') return;
   const left = Math.max(0, st.remainingMs - (Date.now() - recvAt));
   const c = document.getElementById('clock'), f = document.getElementById('fill');
-  if (c) { c.textContent = Math.ceil(left / 1000); c.classList.toggle('low', left <= 5000); }
-  if (f) f.style.width = (left / 300) + '%';
+  if (c) { const t = Math.ceil(left / 1000); c.textContent = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); c.classList.toggle('low', left <= 5000); }
+  if (f) f.style.width = (left / (TURN_MS / 100)) + '%';
   const g = document.querySelector('.guess .n');
   if (g) g.textContent = `${st.gotCount}/5`;
 }, 200);
