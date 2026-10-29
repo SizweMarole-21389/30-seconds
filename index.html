@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>30 Seconds</title>
+<style>
+  :root { --bg:#14102b; --card:#fff8e7; --ink:#2a2140; --accent:#ff7a3d; --good:#2fbf71; --mute:#9d94c4; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:#fff; font-family:system-ui,Segoe UI,Roboto,sans-serif; display:flex; justify-content:center; }
+  main { width:100%; max-width:460px; padding:20px 16px 40px; }
+  h1 { text-align:center; font-size:2rem; margin:8px 0 4px; }
+  h1 span { color:var(--accent); }
+  .sub { text-align:center; color:var(--mute); margin:0 0 16px; }
+  label { display:block; margin:12px 0 4px; color:var(--mute); font-size:.9rem; }
+  input, select { width:100%; padding:12px; border-radius:10px; border:0; font-size:1rem; }
+  button { width:100%; margin-top:14px; padding:14px; font-size:1.1rem; font-weight:700; border:0; border-radius:12px; background:var(--accent); color:#fff; cursor:pointer; }
+  button.ghost { background:transparent; border:2px solid var(--mute); color:var(--mute); }
+  button:disabled { opacity:.5; }
+  .rules { background:#1f1a3d; border-radius:12px; padding:12px 16px; margin-top:18px; font-size:.92rem; line-height:1.5; color:#d6d0ee; }
+  .or { text-align:center; color:var(--mute); margin:18px 0 0; }
+  .err { color:#ff8a8a; text-align:center; min-height:1.2em; margin-top:10px; }
+  .bar { display:flex; justify-content:space-between; font-size:.95rem; color:var(--mute); margin-bottom:10px; gap:8px; }
+  .bar b { color:#fff; }
+  .timer { text-align:center; font-size:4rem; font-weight:800; margin:4px 0 10px; font-variant-numeric:tabular-nums; }
+  .timer.low { color:#ff5a5a; }
+  .track { height:8px; background:#2b2552; border-radius:4px; overflow:hidden; margin-bottom:14px; }
+  .fill { height:100%; background:var(--accent); }
+  .cardbox { background:var(--card); color:var(--ink); border-radius:16px; padding:8px; }
+  .item { display:flex; align-items:center; gap:12px; width:100%; margin:0; padding:14px; font-size:1.2rem; font-weight:600; text-align:left; background:transparent; color:var(--ink); border-radius:10px; border-bottom:1px solid #e8dfc4; }
+  .item:last-child { border-bottom:0; }
+  .item .dot { width:26px; height:26px; border-radius:50%; border:3px solid var(--accent); flex:none; }
+  .item.got { background:#d8f5e5; text-decoration:line-through; color:#555; }
+  .item.got .dot { background:var(--good); border-color:var(--good); }
+  .big { text-align:center; font-size:1.3rem; margin:18px 0 8px; }
+  .score { text-align:center; font-size:3rem; font-weight:800; color:var(--accent); }
+  .code { text-align:center; font-size:3rem; letter-spacing:.3em; font-weight:800; color:var(--accent); margin:6px 0; }
+  .guess { text-align:center; background:#1f1a3d; border-radius:16px; padding:28px 16px; font-size:1.3rem; line-height:1.5; }
+  .guess .n { font-size:3rem; font-weight:800; color:var(--good); display:block; }
+  table { width:100%; border-collapse:collapse; margin-top:12px; }
+  td { padding:10px; background:#1f1a3d; font-size:1.1rem; }
+  tr + tr td { border-top:2px solid var(--bg); }
+  td:last-child { text-align:right; font-weight:800; color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>30 <span>Seconds</span></h1>
+  <p class="sub">Describe it. Don't say it. Beat the clock.</p>
+  <div id="app"></div>
+</main>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+const ITEMS = ["Alarm clock", "Albert Einstein", "Amarula", "Amazon", "Amazon Rainforest", "Antarctica", "Apple", "Avengers", "Backpack", "Barack Obama", "Barbie", "Bat", "Batman", "Bermuda Triangle", "Beyoncé", "Bicycle pump", "Big Ben", "Biltong", "Birthday party", "Black Friday", "Black Mirror", "Black Panther", "Braai", "Bruce Lee", "Bubble wrap", "Buckingham Palace", "Bungee jumping", "Bunny chow", "Burna Boy", "Camping", "Cape Town Waterfront", "Chainsaw", "Chameleon", "Charlie Chaplin", "Checkers", "Cheesecake", "Cheetah", "Chicken wings", "Chocolate cake", "Cleopatra", "Coca-Cola", "Coffee", "Cooking", "Cristiano Ronaldo", "Crocodile", "Dancing", "Discovery", "Disneyland", "Dolphin", "Dragon Ball Z", "Drake", "Dubai", "Durban beachfront", "Eiffel Tower", "Elephant", "Elon Musk", "Encanto", "Exam week", "FIFA", "Fast and Furious", "Finding Nemo", "Fireworks", "Fish and chips", "Fishing", "Flamingo", "Fortnite", "Fridge", "Friends", "Frozen", "Game of Thrones", "Gardening", "Generations", "Giraffe", "Google", "Gorilla", "Graduation", "Grand Canyon", "Great Wall of China", "Group project", "Gym", "Hair straightener", "Hamburger", "Hammock", "Handcuffs", "Harry Potter", "Headphones", "Hide and seek", "Hippo", "Hollywood", "Home Alone", "Hong Kong", "Hot water bottle", "Hulk Hogan", "Ice cream", "Instagram", "Jelly Tots", "Job interview", "Johannesburg", "Jurassic Park", "Kangaroo", "Karaoke", "Kendrick Lamar", "Keyboard", "Kim Kardashian", "Koeksister", "Kota", "Kruger Park", "Leonardo da Vinci", "Lionel Messi", "Lipstick", "Load shedding", "Loadshedding", "Loch Ness", "Lord of the Rings", "MTN", "Mango", "Marilyn Monroe", "McDonald's", "Meerkat", "Michael Jackson", "Michael Jordan", "Microwave", "Milkshake", "Minecraft", "Moana", "Money Heist", "Mosquito net", "Mother Teresa", "Mount Everest", "Mr Bean", "Mr Price", "Nando's", "Napoleon", "Naruto", "Nelson Mandela", "Netflix", "Netflix and chill", "Niagara Falls", "Nike", "Noodles", "Octopus", "Online shopping", "Oprah Winfrey", "Owl", "Pancakes", "Pap and wors", "Parachute", "Peacock", "Peanut butter", "Penguin", "Pineapple", "Pirates of the Caribbean", "Pizza", "PlayStation", "Popcorn", "Power bank", "Pyramids of Giza", "Queen Elizabeth II", "Remote control", "Rhino", "Rihanna", "Road trip", "Robben Island", "Rock climbing", "Rooibos tea", "Sahara Desert", "Samsung", "Santa Claus", "Scorpion", "Selfie", "Selfie stick", "Serena Williams", "Shakespeare", "Shark", "Sherlock Holmes", "Shoprite", "Shrek", "Siya Kolisi", "Skateboard", "Skydiving", "Snapchat", "Spaghetti", "Spider-Man", "SpongeBob", "Spotify", "Squid Game", "Star Wars", "Statue of Liberty", "Steve Jobs", "Stranger Things", "Sun City", "Sunglasses", "Surfing", "Sushi", "Swimming", "Table Mountain", "Taj Mahal", "Takealot", "Taxi rank", "Taylor Swift", "Telescope", "Tesla", "The Lion King", "The Matrix", "The Simpsons", "TikTok", "Times Square", "Titanic", "Toasted sandwich", "Tom and Jerry", "Tomato sauce", "Toothbrush", "Tortoise", "Toy Story", "Traffic jam", "Trampoline", "Trevor Noah", "Tyla", "Uber", "Uber Eats", "Umbrella", "Usain Bolt", "Vacuum cleaner", "Vatican City", "Vetkoek", "Victoria Falls", "Video call", "Vodacom", "Washing machine", "Watermelon", "Wedding", "WhatsApp", "Wheelbarrow", "Whitney Houston", "Wi-Fi router", "Woolworths", "Yoga", "YouTube", "Zanzibar"];
+const TURN_MS = 30000;
+const PEER_PREFIX = 'sec30-';
+const app = document.getElementById('app');
+
+let isHost = false, peer = null, conn = null;
+let room = null;          // host only: the authoritative game state
+let st = null, sig = '', recvAt = 0;
+
+function el(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  Object.assign(e, props || {});
+  kids.flat().forEach(k => e.append(k));
+  return e;
+}
+const txt = (tag, cls, t) => el(tag, { className: cls, textContent: t });
+
+/* ---------- game engine (runs in the host's browser) ---------- */
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function draw() {
+  if (room.deck.length < 5) room.deck = shuffle([...ITEMS]);
+  return room.deck.splice(0, 5);
+}
+function finishTurn() {
+  if (room.phase !== 'play') return;
+  room.players[room.turn % 2].score += room.got.filter(Boolean).length;
+  room.phase = 'result';
+}
+function tick() {
+  if (room && room.phase === 'play' && Date.now() >= room.endsAt) finishTurn();
+}
+function view(me) {
+  const d = room.turn % 2;
+  const showCard = room.phase === 'result' || (room.phase === 'play' && me === d);
+  return {
+    code: room.code, phase: room.phase, rounds: room.rounds, turn: room.turn,
+    round: Math.floor(room.turn / 2) + 1,
+    lastTurn: room.turn + 1 >= room.rounds * 2,
+    me, describer: d,
+    players: room.players.map(p => ({ name: p.name, score: p.score })),
+    card: showCard ? room.card : null,
+    got: room.phase === 'play' || room.phase === 'result' ? room.got : null,
+    gotCount: room.got.filter(Boolean).length,
+    remainingMs: room.phase === 'play' ? Math.max(0, room.endsAt - Date.now()) : 0,
+  };
+}
+function apply(me, type, i) {
+  tick();
+  const d = room.turn % 2;
+  if (type === 'start' && room.phase === 'ready' && me === d) {
+    room.card = draw();
+    room.got = room.card.map(() => false);
+    room.endsAt = Date.now() + TURN_MS;
+    room.phase = 'play';
+  } else if (type === 'toggle' && room.phase === 'play' && me === d) {
+    if (i >= 0 && i < 5) room.got[i] = !room.got[i];
+  } else if (type === 'done' && room.phase === 'play' && me === d) {
+    finishTurn();
+  } else if (type === 'next' && room.phase === 'result') {
+    room.turn++;
+    room.phase = room.turn >= room.rounds * 2 ? 'end' : 'ready';
+  } else if (type === 'again' && room.phase === 'end') {
+    room.players.forEach(p => { p.score = 0; });
+    room.turn = 0;
+    room.deck = shuffle([...ITEMS]);
+    room.phase = 'ready';
+  }
+  publish();
+}
+function publish() {
+  setState(view(0));
+  if (conn && conn.open) conn.send({ t: 'state', s: view(1) });
+}
+
+/* ---------- networking ---------- */
+function cleanName(s) { return String(s || '').replace(/[<>]/g, '').trim().slice(0, 16); }
+
+function newCode() {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let c = '';
+  for (let i = 0; i < 4; i++) c += letters[crypto.getRandomValues(new Uint32Array(1))[0] % letters.length];
+  return c;
+}
+
+function hostGame(name, rounds, fail, tries = 0) {
+  const code = newCode();
+  peer = new Peer(PEER_PREFIX + code);
+  peer.on('open', () => {
+    isHost = true;
+    room = { code, rounds, turn: 0, phase: 'lobby', deck: shuffle([...ITEMS]), card: [], got: [], endsAt: 0,
+             players: [{ name: cleanName(name) || 'Player 1', score: 0 }] };
+    publish();
+  });
+  peer.on('connection', c => {
+    if (conn && conn.open) { c.on('open', () => { c.send({ t: 'full' }); setTimeout(() => c.close(), 300); }); return; }
+    conn = c;
+    c.on('data', m => {
+      if (m.t === 'join' && room.players.length < 2) {
+        room.players.push({ name: cleanName(m.name) || 'Player 2', score: 0 });
+        room.phase = 'ready';
+        publish();
+      } else if (m.t === 'act' && room.players.length === 2) {
+        apply(1, m.type, +m.i);
+      }
+    });
+    c.on('close', () => showLost('Your friend left the game.'));
+  });
+  peer.on('error', e => {
+    if (e.type === 'unavailable-id' && tries < 5) { peer.destroy(); hostGame(name, rounds, fail, tries + 1); }
+    else fail('Could not start a game. Check your internet and try again.');
+  });
+  setInterval(() => { if (room) { const was = room.phase; tick(); if (was !== room.phase || room.phase === 'play') publish(); } }, 500);
+}
+
+function joinGame(name, code, fail) {
+  code = code.toUpperCase().trim();
+  if (code.length !== 4) return fail('Enter the 4 letter code.');
+  peer = new Peer();
+  let opened = false;
+  const timeout = setTimeout(() => { if (!opened) { fail('Could not reach that game. Check the code and that your friend still has the page open.'); peer.destroy(); } }, 12000);
+  peer.on('open', () => {
+    conn = peer.connect(PEER_PREFIX + code, { reliable: true });
+    conn.on('open', () => { opened = true; clearTimeout(timeout); conn.send({ t: 'join', name: cleanName(name) }); });
+    conn.on('data', m => {
+      if (m.t === 'state') setState(m.s);
+      else if (m.t === 'full') fail('That game is already full.');
+    });
+    conn.on('close', () => showLost('Lost the connection to the host.'));
+  });
+  peer.on('error', e => {
+    clearTimeout(timeout);
+    fail(e.type === 'peer-unavailable' ? 'No game with that code.' : 'Connection problem. Try again.');
+  });
+}
+
+function showLost(msg) {
+  app.replaceChildren(txt('p', 'big', msg), el('button', { textContent: 'Back to start', onclick: () => location.href = location.pathname }));
+  sig = 'lost';
+}
+
+/* ---------- home ---------- */
+function renderHome(err) {
+  const urlCode = (new URLSearchParams(location.search).get('code') || '').toUpperCase();
+  const name = el('input', { placeholder: 'Your name', maxLength: 16 });
+  try { name.value = localStorage.getItem('name') || ''; } catch (e) { /* storage blocked */ }
+  const rounds = el('select', {}, ...[3, 5, 8, 10].map(n => el('option', { value: n, textContent: n, selected: n === 5 })));
+  const joinCode = el('input', { placeholder: 'Game code', maxLength: 4, value: urlCode, style: 'text-transform:uppercase;letter-spacing:.3em;text-align:center' });
+  const errBox = txt('div', 'err', err || '');
+  const fail = m => { errBox.textContent = m; };
+  const remember = () => { try { localStorage.setItem('name', name.value); } catch (e) { /* ignore */ } };
+  const create = el('button', { textContent: 'Start a new game', onclick: () => {
+    errBox.textContent = 'Starting...'; remember(); hostGame(name.value, +rounds.value, fail);
+  } });
+  const join = el('button', { textContent: 'Join a game', onclick: () => {
+    errBox.textContent = 'Connecting...'; remember(); joinGame(name.value, joinCode.value, fail);
+  } });
+  app.replaceChildren(
+    txt('label', '', 'Your name'), name,
+    urlCode ? txt('p', 'or', 'You were invited. Enter your name and join.')
+            : el('div', {}, txt('label', '', 'Rounds each'), rounds, create, txt('p', 'or', 'or join a friend')),
+    txt('label', '', 'Game code'), joinCode, join, errBox,
+    txt('div', 'rules', 'One of you starts a game and sends the link or the 4 letter code. You both play on your own phone or laptop, and you talk on a call. Take turns: the describer sees 5 names or things and has 30 seconds to describe them without saying the words. The other person guesses out loud. The describer taps each one that was guessed. 1 point each. The person who started the game must keep the page open.')
+  );
+}
+
+/* ---------- game screens ---------- */
+function scoreBar() {
+  const [a, b] = st.players;
+  return el('div', { className: 'bar' },
+    txt('span', '', `Round ${Math.min(st.round, st.rounds)} of ${st.rounds}`),
+    el('span', {}, `${a.name} `, el('b', { textContent: a.score }), ` | ${b ? b.name : '?'} `, el('b', { textContent: b ? b.score : 0 })));
+}
+
+function act(type, extra) {
+  if (isHost) apply(0, type, extra ? extra.i : 0);
+  else if (conn && conn.open) conn.send({ t: 'act', type, i: extra ? extra.i : 0 });
+}
+
+function render() {
+  const me = st.me;
+  const d = st.players[st.describer];
+  const iAmDescriber = st.describer === me;
+
+  if (st.phase === 'lobby') {
+    const link = `${location.origin}${location.pathname}?code=${st.code}`;
+    const copy = el('button', { textContent: 'Copy invite link', onclick: async () => {
+      try { await navigator.clipboard.writeText(link); copy.textContent = 'Copied. Send it to her.'; } catch { copy.textContent = link; }
+    } });
+    return app.replaceChildren(
+      txt('p', 'big', 'Waiting for your friend'), txt('div', 'code', st.code),
+      txt('p', 'sub', 'Send her the link below, or tell her the code. Keep this page open.'), copy);
+  }
+
+  if (st.phase === 'ready') {
+    const body = iAmDescriber
+      ? [txt('p', 'big', `${d.name}, you're describing.`), txt('p', 'sub', 'Your friend guesses out loud. Press start when you are both ready.'),
+         el('button', { textContent: 'Start the 30 seconds', onclick: () => act('start') })]
+      : [txt('p', 'big', `${d.name} is describing.`), txt('p', 'sub', 'Get ready to guess. The words show on their screen, not yours.')];
+    return app.replaceChildren(scoreBar(), ...body);
+  }
+
+  if (st.phase === 'play') {
+    const clock = el('div', { className: 'timer', id: 'clock' });
+    const fill = el('div', { className: 'fill', id: 'fill' });
+    const head = [scoreBar(), clock, el('div', { className: 'track' }, fill)];
+    if (iAmDescriber) {
+      const box = el('div', { className: 'cardbox' }, st.card.map((c, i) =>
+        el('button', { className: 'item' + (st.got[i] ? ' got' : ''), onclick: () => act('toggle', { i }) },
+          el('span', { className: 'dot' }), txt('span', '', c))));
+      return app.replaceChildren(...head, box, el('button', { className: 'ghost', textContent: 'Done early', onclick: () => act('done') }));
+    }
+    return app.replaceChildren(...head, el('div', { className: 'guess' },
+      `${d.name} is describing. Guess out loud!`, el('span', { className: 'n', textContent: `${st.gotCount}/5` }), 'guessed so far'));
+  }
+
+  if (st.phase === 'result') {
+    const rows = st.card.map((c, i) => el('tr', {}, txt('td', '', c), txt('td', '', st.got[i] ? '✓' : '✗')));
+    return app.replaceChildren(scoreBar(), txt('p', 'big', `${d.name}'s turn`), txt('div', 'score', `+${st.gotCount}`),
+      el('table', {}, ...rows),
+      el('button', { textContent: st.lastTurn ? 'See final result' : 'Next turn', onclick: () => act('next') }));
+  }
+
+  if (st.phase === 'end') {
+    const [a, b] = st.players;
+    const w = a.score === b.score ? "It's a draw!" : `${a.score > b.score ? a.name : b.name} wins!`;
+    return app.replaceChildren(txt('p', 'big', 'Game over'), txt('div', 'score', w),
+      el('table', {}, ...st.players.map(p => el('tr', {}, txt('td', '', p.name), txt('td', '', p.score)))),
+      el('button', { textContent: 'Play again', onclick: () => act('again') }));
+  }
+}
+
+function setState(s) {
+  st = s; recvAt = Date.now();
+  const key = JSON.stringify({ ...s, remainingMs: 0, gotCount: s.phase === 'play' ? 0 : s.gotCount });
+  if (key !== sig) { sig = key; render(); }
+}
+
+setInterval(() => {
+  if (!st || st.phase !== 'play') return;
+  const left = Math.max(0, st.remainingMs - (Date.now() - recvAt));
+  const c = document.getElementById('clock'), f = document.getElementById('fill');
+  if (c) { c.textContent = Math.ceil(left / 1000); c.classList.toggle('low', left <= 5000); }
+  if (f) f.style.width = (left / 300) + '%';
+  const g = document.querySelector('.guess .n');
+  if (g) g.textContent = `${st.gotCount}/5`;
+}, 200);
+
+renderHome();
+</script>
+</body>
+</html>
